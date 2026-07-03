@@ -493,7 +493,15 @@ define TOOLCHAIN_EXTERNAL_INSTALL_SYSROOT_LIBS
 		SUPPORT_LIB_DIR=$(TOOLCHAIN_EXTERNAL_BIN)/../target/$(TOOLCHAIN_EXTERNAL_PREFIX); \
 	fi ; \
 	$(call MESSAGE,"Copying external toolchain sysroot to staging...") ; \
-	$(call copy_toolchain_sysroot,$${SYSROOT_DIR},$${ARCH_SYSROOT_DIR},$${ARCH_SUBDIR},$${ARCH_LIB_DIR},$${SUPPORT_LIB_DIR})
+	$(call copy_toolchain_sysroot,$${SYSROOT_DIR},$${ARCH_SYSROOT_DIR},$${ARCH_SUBDIR},$${ARCH_LIB_DIR},$${SUPPORT_LIB_DIR}) ; \
+	if test "$(BR2_hexagon)" = "y"; then \
+		for l in $$(find $(STAGING_DIR) -xtype l -name 'libclang_rt.builtins-hexagon.*') ; do \
+			b=$$(basename $${l} | sed -e 's/-hexagon//') ; \
+			r=$$(LANG=C $(TOOLCHAIN_EXTERNAL_CC) $(TOOLCHAIN_EXTERNAL_CFLAGS) -print-file-name=$${b}) ; \
+			rm -f "$${l}" ; \
+			cp -L "$${r}" "$${l}" ; \
+		done ; \
+	fi
 endef
 
 # Create a symlink from (usr/)$(ARCH_LIB_DIR) to lib.

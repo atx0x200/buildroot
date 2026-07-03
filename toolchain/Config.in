@@ -306,6 +306,9 @@ config BR2_TOOLCHAIN_HAS_OPENMP
 
 config BR2_TOOLCHAIN_SUPPORTS_PIE
 	bool
+	# This feature is not well-tested for the hexagon downloadable
+	# external toolchain:
+	default "n" if BR2_TOOLCHAIN_EXTERNAL_HEXAGON
 
 config BR2_TOOLCHAIN_GLIBC_GCONV_LIBS_COPY
 	bool "Copy gconv libraries"

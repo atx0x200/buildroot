@@ -25,11 +25,23 @@ LIBZLIB_PIC = -fPIC
 LIBZLIB_SHARED = --shared
 endif
 
+# hexagon-unknown-linux-musl's ld.lld errors out (unlike GNU ld, which just
+# warns) when a --version-script assigns a version to a symbol that isn't
+# defined in the object being linked. zlib's configure "checking for shared
+# library support" test hits exactly that: it links a trivial one-function
+# test object against the real zlib.map, which lists the full zlib API, so
+# the link fails and configure silently falls back to building only the
+# static library. Ask lld to tolerate this the way GNU ld does by default.
+ifeq ($(BR2_hexagon),y)
+LIBZLIB_LDSHARED = LDSHARED="$(TARGET_CC) -shared -Wl,-soname,libz.so.1,--version-script,zlib.map -Wl,--undefined-version"
+endif
+
 define LIBZLIB_CONFIGURE_CMDS
 	(cd $(@D); rm -rf config.cache; \
 		$(TARGET_CONFIGURE_ARGS) \
 		$(TARGET_CONFIGURE_OPTS) \
 		CFLAGS="$(TARGET_CFLAGS) $(LIBZLIB_PIC)" \
+		$(LIBZLIB_LDSHARED) \
 		./configure \
 		$(LIBZLIB_SHARED) \
 		--prefix=/usr \
