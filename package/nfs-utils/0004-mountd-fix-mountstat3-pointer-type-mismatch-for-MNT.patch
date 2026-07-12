@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sid Manning <atx0x200@gmail.com>
+Date: Sun, 12 Jul 2026 16:25:00 -0500
+Subject: [PATCH] mountd: fix mountstat3 pointer type mismatch for MNT1
+
+get_rootfh() always takes a 'mountstat3 *' for its error output
+argument, but the v2 mount protocol's fhstatus.fhs_status field is
+declared 'u_int' (its own XDR routine passes it to xdr_u_int()),
+while the v3 mountres3.fhs_status field is declared 'mountstat3'.
+mount_mnt_1_svc() (the v2 MNT handler) passed &res->fhs_status
+straight through, an incompatible pointer type that GCC only warns
+about but Clang treats as an error by default.
+
+Both fields are 4-byte integers occupying the same value domain
+(get_rootfh() only ever stores MNT3ERR_* values, which fit the v2
+status field just as they always have), so a local cast at this one
+call site is sufficient. Changing fhstatus.fhs_status's declared
+type instead would only move the same error to its xdr_u_int() call
+in mount_xdr.c.
+
+Signed-off-by: Sid Manning <atx0x200@gmail.com>
+---
+ utils/mountd/mountd.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/utils/mountd/mountd.c b/utils/mountd/mountd.c
+index 3eda7d343..0bcd9552d 100644
+--- a/utils/mountd/mountd.c
++++ b/utils/mountd/mountd.c
+@@ -168,7 +168,7 @@
+ 	xlog(D_CALL, "Received MNT1(%s) request from %s", *path,
+ 		host_ntop(sap, buf, sizeof(buf)));
+ 
+-	fh = get_rootfh(rqstp, path, NULL, &res->fhs_status, 0);
++	fh = get_rootfh(rqstp, path, NULL, (mountstat3 *)&res->fhs_status, 0);
+ 	if (fh)
+ 		memcpy(&res->fhstatus_u.fhs_fhandle, fh->fh_handle, 32);
+ 	return 1;
+--
+2.46.2

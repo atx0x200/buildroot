@@ -1,0 +1,65 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sid Manning <atx0x200@gmail.com>
+Date: Sun, 12 Jul 2026 16:30:00 -0500
+Subject: [PATCH] mount: fstab: add explicit (void) to parameterless function
+ definitions
+
+mtab_is_writable(), read_mounttable(), read_procmounts() and
+read_fstab() were defined using old K&R-style empty parentheses,
+which historically meant "unspecified arguments" rather than "no
+arguments". C23 changes empty parentheses on a function definition
+to explicitly mean zero arguments, and recent Clang versions warn
+about the old form being deprecated, which nfs-utils' unconditional
+-Werror=strict-prototypes turns into a hard build error.
+
+None of these functions take arguments and none are called with
+any, so adding the explicit (void) parameter list is a no-op change
+in behavior that matches what the code already assumed.
+
+Signed-off-by: Sid Manning <atx0x200@gmail.com>
+---
+ utils/mount/fstab.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/utils/mount/fstab.c b/utils/mount/fstab.c
+index 3eda7d343..0bcd9552d 100644
+--- a/utils/mount/fstab.c
++++ b/utils/mount/fstab.c
+@@ -68,7 +68,7 @@
+ }
+ 
+ int
+-mtab_is_writable() {
++mtab_is_writable(void) {
+ 	int fd;
+ 
+ 	/* Should we write to /etc/mtab upon an update?
+@@ -175,7 +175,7 @@
+  * Return 0 on success.
+  */
+ static void
+-read_mounttable() {
++read_mounttable(void) {
+         mntFILE *mfp;
+         const char *fnam;
+         struct mntentchn *mc = &mounttable;
+@@ -207,7 +207,7 @@
+  * Return 0 on success.
+  */
+ static void
+-read_procmounts() {
++read_procmounts(void) {
+         mntFILE *mfp;
+         const char *fnam;
+         struct mntentchn *mc = &procmounts;
+@@ -226,7 +226,7 @@
+ }
+ 
+ static void
+-read_fstab()
++read_fstab(void)
+ {
+ 	mntFILE *mfp = NULL;
+ 	const char *fnam;
+--
+2.46.2

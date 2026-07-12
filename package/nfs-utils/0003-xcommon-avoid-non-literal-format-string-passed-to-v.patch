@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sid Manning <atx0x200@gmail.com>
+Date: Sun, 12 Jul 2026 16:20:00 -0500
+Subject: [PATCH] xcommon: avoid non-literal format string passed to vfprintf
+
+nfs_error() built its actual format string at runtime by
+concatenating the caller's fmt with "\n", then passed that computed
+string to vfprintf(). nfs-utils enables -Werror=format=2
+unconditionally, and Clang's -Wformat-nonliteral (part of
+-Wformat=2) flags any vfprintf()-family call whose format argument
+is not provably a string literal, which errors out the build.
+
+Passing 'fmt' straight through to vfprintf() and printing the
+trailing newline separately keeps nfs_error()'s existing behavior
+(message followed by a newline) while matching the format-attribute
+forwarding idiom both GCC and Clang recognize as safe for this kind
+of printf wrapper, since nfs_error() itself is already declared
+with __attribute__((format(printf, 1, 2))) in xcommon.h.
+
+Signed-off-by: Sid Manning <atx0x200@gmail.com>
+---
+ support/nfs/xcommon.c | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/support/nfs/xcommon.c b/support/nfs/xcommon.c
+index 3eda7d343..0bcd9552d 100644
+--- a/support/nfs/xcommon.c
++++ b/support/nfs/xcommon.c
+@@ -94,13 +94,11 @@
+ void
+ nfs_error (const char *fmt, ...) {
+      va_list args;
+-     char *fmt2;
+ 
+-     fmt2 = xstrconcat2 (fmt, "\n");
+      va_start (args, fmt);
+-     vfprintf (stderr, fmt2, args);
++     vfprintf (stderr, fmt, args);
+      va_end (args);
+-     free (fmt2);
++     fputc ('\n', stderr);
+ }
+ 
+ /* Make a canonical pathname from PATH.  Returns a freshly malloced string.
+--
+2.46.2
