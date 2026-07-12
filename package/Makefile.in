@@ -295,11 +295,30 @@ TARGET_MAKE_ENV = \
 	GIT_DIR=. \
 	PATH=$(BR_PATH)
 
+# For Clang-based external toolchains, TARGET_LD is the clang driver
+# itself, not a raw "ld" binary (see TARGET_LD_SUFFIX in
+# pkg-toolchain-external.mk). That's fine for actual compiling/linking,
+# which always goes through the compiler driver via CC/CXX, but it
+# breaks autoconf/libtool's linker capability probing at configure
+# time: libtool runs "$LD -v" and "$LD --help" expecting GNU-ld-style
+# output ("GNU ld ...", ": supported targets: ... elf ..."), but gets
+# Clang's own version banner/help instead. That misdetects the linker
+# as non-GNU and lacking ELF support, so libtool concludes shared
+# libraries aren't supported and silently skips linking .so files
+# (only creating the versioned symlinks) -- "make install" then fails
+# trying to install a .so that was never built. Point LD at the real
+# linker (LLD) instead, purely for this capability-detection purpose,
+# when it exists.
+TARGET_CONFIGURE_LD = $(TARGET_LD)
+ifeq ($(BR2_TOOLCHAIN_EXTERNAL_CLANG),y)
+TARGET_CONFIGURE_LD = $(TARGET_CROSS)ld.lld
+endif
+
 TARGET_CONFIGURE_OPTS = \
 	$(TARGET_MAKE_ENV) \
 	AR="$(TARGET_AR)" \
 	AS="$(TARGET_AS)" \
-	LD="$(TARGET_LD)" \
+	LD="$(TARGET_CONFIGURE_LD)" \
 	NM="$(TARGET_NM)" \
 	CC="$(TARGET_CC)" \
 	GCC="$(TARGET_CC)" \

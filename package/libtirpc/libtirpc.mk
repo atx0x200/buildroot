@@ -22,6 +22,12 @@ LIBTIRPC_CONF_OPTS += --enable-gssapi
 LIBTIRPC_DEPENDENCIES += libkrb5
 else
 LIBTIRPC_CONF_OPTS += --disable-gssapi
+# src/libtirpc.map unconditionally lists GSS-API symbols in its
+# version script even when built with --disable-gssapi, so those
+# symbols never get defined. GNU ld silently drops unmatched
+# version-script entries, but LLD treats that as a hard error unless
+# told otherwise.
+LIBTIRPC_CONF_ENV += LDFLAGS="-Wl,--undefined-version"
 endif
 HOST_LIBTIRPC_CONF_OPTS = --disable-gssapi
 
