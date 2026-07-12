@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Sid Manning <atx0x200@gmail.com>
+Date: Sun, 12 Jul 2026 16:10:00 -0500
+Subject: [PATCH] cache: fix cache_metadata_format_t pointer type mismatch
+
+dm_config_get_uint32() expects a 'uint32_t *' for its result
+argument, but struct lv_segment's cache_metadata_format field is
+declared as 'cache_metadata_format_t', an incompatible pointer
+type when its address is taken in
+lib/cache_segtype/cache.c:_cache_pool_text_import() and
+_cache_text_import(). GCC only warns about this, but Clang treats
+-Wincompatible-pointer-types as an error by default, which breaks
+the build with clang-based toolchains.
+
+cache_metadata_format only ever holds CACHE_METADATA_FORMAT_*
+values, so declaring the field as uint32_t preserves the existing
+semantics while matching dm_config_get_uint32()'s prototype. All
+other uses of this field are by value, not by address, so this is
+a safe, narrowly-scoped change.
+
+Signed-off-by: Sid Manning <atx0x200@gmail.com>
+---
+ lib/metadata/metadata-exported.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/lib/metadata/metadata-exported.h b/lib/metadata/metadata-exported.h
+index 3eda7d343..0bcd9552d 100644
+--- a/lib/metadata/metadata-exported.h
++++ b/lib/metadata/metadata-exported.h
+@@ -534,7 +534,7 @@
+ 	struct id *metadata_id;			/* For cache, when NULL uses CVOL id */
+ 	struct id *data_id;			/* For cache, when NULL uses CVOL id */
+
+-	cache_metadata_format_t cache_metadata_format;/* For cache_pool */
++	uint32_t cache_metadata_format;/* For cache_pool */
+ 	cache_mode_t cache_mode;		/* For cache_pool */
+ 	const char *policy_name;		/* For cache_pool */
+ 	struct dm_config_node *policy_settings;	/* For cache_pool */
+--
+2.46.2
